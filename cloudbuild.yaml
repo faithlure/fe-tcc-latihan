@@ -32,6 +32,7 @@ steps:
 # Gunakan builder dengan spesifikasi rendah
 options:
   machineType: 'E2_MEDIUM'  # Machine type yang lebih kecil
+  logging: CLOUD_LOGGING_ONLY
   
 # Batasi timeout untuk memastikan tidak ada build yang terhenti terlalu lama
 timeout: '600s'  # 10 menit

@@ -16,17 +16,36 @@ steps:
       - 'NODE_ENV=production'
       
   # Deploy ke App Engine dengan konfigurasi hemat
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'  # Menggunakan versi slim
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: 'bash'
     id: 'Deploy to App Engine'
     args:
       - '-c'
       - |
         gcloud app deploy --version=${SHORT_SHA} --quiet --no-promote
-        # Hapus versi lama jika ada lebih dari 2 versi aktif
-        OLD_VERSIONS=$(gcloud app versions list --service=asisten-tcc-5-fe --sort-by=~LAST_DEPLOYED --format="value(id)" | sed 1,2d)
-        if [ -n "$OLD_VERSIONS" ]; then
-          gcloud app versions delete $OLD_VERSIONS --quiet
+
+  # Langkah terpisah untuk membersihkan versi lama
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'bash'
+    id: 'Clean Old Versions'
+    args:
+      - '-c'
+      - |
+        # Simpan daftar semua versi, urutkan berdasarkan deployment terbaru
+        VERSIONS=$(gcloud app versions list --service=asisten-tcc-5-fe --sort-by=~LAST_DEPLOYED --format="value(id)")
+        
+        # Ambil 2 baris pertama (2 versi terbaru) dan simpan
+        KEEP_VERSIONS=$(echo "$VERSIONS" | head -n 2)
+        
+        # Ambil versi sisanya yang akan dihapus
+        DELETE_VERSIONS=$(echo "$VERSIONS" | tail -n +3)
+        
+        # Hapus versi lama jika ada
+        if [ -n "$DELETE_VERSIONS" ]; then
+          echo "Deleting old versions: $DELETE_VERSIONS"
+          gcloud app versions delete $DELETE_VERSIONS --quiet || echo "No old versions to delete"
+        else
+          echo "No old versions to delete"
         fi
 
 # Gunakan builder dengan spesifikasi rendah

@@ -1,0 +1,3 @@
+# app.yaml
+runtime: nodejs20
+service: asisten-tcc-5-fe

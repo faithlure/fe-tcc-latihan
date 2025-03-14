@@ -1,0 +1,37 @@
+# cloudbuild.yaml
+steps:
+  # Install dependencies
+  - name: 'node:20'
+    entrypoint: npm
+    id: 'Install Dependencies'
+    args: ['ci']
+    
+  # Optimize build - gunakan --production flag
+  - name: 'node:20'
+    entrypoint: npm
+    id: 'Build React App'
+    args: ['run', 'build']
+    env:
+      - 'GENERATE_SOURCEMAP=false'
+      - 'NODE_ENV=production'
+      
+  # Deploy ke App Engine dengan konfigurasi hemat
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'  # Menggunakan versi slim
+    entrypoint: 'bash'
+    id: 'Deploy to App Engine'
+    args:
+      - '-c'
+      - |
+        gcloud app deploy --version=${SHORT_SHA} --quiet --no-promote
+        # Hapus versi lama jika ada lebih dari 2 versi aktif
+        OLD_VERSIONS=$(gcloud app versions list --service=asisten-tcc-5-fe --sort-by=~LAST_DEPLOYED --format="value(id)" | sed 1,2d)
+        if [ -n "$OLD_VERSIONS" ]; then
+          gcloud app versions delete $OLD_VERSIONS --quiet
+        fi
+
+# Gunakan builder dengan spesifikasi rendah
+options:
+  machineType: 'E2_MEDIUM'  # Machine type yang lebih kecil
+  
+# Batasi timeout untuk memastikan tidak ada build yang terhenti terlalu lama
+timeout: '600s'  # 10 menit
